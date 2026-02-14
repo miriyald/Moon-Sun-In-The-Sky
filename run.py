@@ -423,7 +423,7 @@ def main():
         "Varanasi": (25.3176, 83.0062, "Asia/Kolkata"),
     }
 
-    start_year = 2020
+    start_year = 2000
     end_year = datetime.datetime.now().year
     summary_data = []
 
