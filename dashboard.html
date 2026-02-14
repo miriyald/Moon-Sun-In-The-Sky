@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun/Moon Analysis Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .table-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .location-filter {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .location-filter h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☀️ Sun/Moon Analysis Dashboard 🌙</h1>
+            <p>Daily sun rise/set, moon rise/set, and overlap analysis across 8 global locations (2020-2025)</p>
+        </header>
+
+        <div class="stats-row" id="statsContainer"></div>
+
+        <div class="location-filter">
+            <h2>Filter by Location:</h2>
+            <div class="filter-buttons" id="filterButtons"></div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Sun Days by Location (2020-2025)</h2>
+            <div class="chart-wrapper">
+                <canvas id="sunChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Moon Days by Location (2020-2025)</h2>
+            <div class="chart-wrapper">
+                <canvas id="moonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Overlap Days by Location (2020-2025)</h2>
+            <div class="chart-wrapper">
+                <canvas id="overlapChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>No Sun/Moon Days by Location (2020-2025)</h2>
+            <div class="chart-wrapper">
+                <canvas id="noSunMoonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2>Detailed Data Table</h2>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Year</th>
+                        <th>Sun Days</th>
+                        <th>Moon Days</th>
+                        <th>Overlap Days</th>
+                        <th>No Sun/Moon Days</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Data generated based on astronomical calculations for each location's timezone</p>
+        </footer>
+    </div>
+
+    <script>
+        // Embedded CSV data
+        const csvData = `Location,Year,Sun-Days,Moon-Days,Overlap-Days,No-Sun-No-Moon-Days
+NewYork,2020,186,183,92,89
+NewYork,2021,186,184,94,90
+NewYork,2022,186,184,95,91
+NewYork,2023,186,184,93,88
+NewYork,2024,186,181,93,92
+NewYork,2025,186,180,92,91
+SaoPaulo,2020,185,182,91,90
+SaoPaulo,2021,184,181,92,92
+SaoPaulo,2022,184,181,93,93
+SaoPaulo,2023,184,180,89,91
+SaoPaulo,2024,185,183,94,92
+SaoPaulo,2025,184,183,92,90
+London,2020,187,184,93,88
+London,2021,187,185,95,89
+London,2022,187,184,96,90
+London,2023,187,186,94,86
+London,2024,187,181,94,92
+London,2025,187,179,91,91
+Cairo,2020,185,182,91,89
+Cairo,2021,185,183,93,90
+Cairo,2022,185,183,95,92
+Cairo,2023,185,184,92,88
+Cairo,2024,185,182,93,92
+Cairo,2025,185,181,92,91
+Tokyo,2020,186,183,92,89
+Tokyo,2021,185,183,94,90
+Tokyo,2022,185,183,95,92
+Tokyo,2023,185,183,92,89
+Tokyo,2024,186,181,93,92
+Tokyo,2025,185,180,91,91
+Sydney,2020,185,180,90,91
+Sydney,2021,184,177,90,94
+Sydney,2022,184,179,92,94
+Sydney,2023,184,179,89,91
+Sydney,2024,185,182,93,92
+Sydney,2025,184,184,93,90
+McMurdo,2020,40,64,7,270
+McMurdo,2021,40,62,8,270
+McMurdo,2022,40,59,6,272
+McMurdo,2023,40,53,6,278
+McMurdo,2024,40,56,7,277
+McMurdo,2025,40,55,6,276
+Varanasi,2020,184,183,91,90
+Varanasi,2021,184,183,93,92
+Varanasi,2022,184,183,94,92
+Varanasi,2023,184,183,91,89
+Varanasi,2024,184,183,93,92
+Varanasi,2025,184,181,91,91`;
+
+        // Parse CSV data
+        function parseCSV(data) {
+            const lines = data.trim().split('\n');
+            const headers = lines[0].split(',');
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const obj = {};
+                const currentLine = lines[i].split(',');
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j].trim()] = isNaN(currentLine[j]) ? currentLine[j] : parseInt(currentLine[j]);
+                }
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        const data = parseCSV(csvData);
+        const locations = [...new Set(data.map(d => d['Location']))];
+        const years = [...new Set(data.map(d => d['Year']))].sort();
+
+        let filteredData = data;
+        let selectedLocation = null;
+
+        // Populate filter buttons
+        function populateFilters() {
+            const filterContainer = document.getElementById('filterButtons');
+            const btnAll = document.createElement('button');
+            btnAll.textContent = 'All Locations';
+            btnAll.className = 'filter-btn active';
+            btnAll.onclick = () => setFilter(null);
+            filterContainer.appendChild(btnAll);
+
+            locations.forEach(loc => {
+                const btn = document.createElement('button');
+                btn.textContent = loc;
+                btn.className = 'filter-btn';
+                btn.onclick = () => setFilter(loc);
+                filterContainer.appendChild(btn);
+            });
+        }
+
+        function setFilter(location) {
+            selectedLocation = location;
+            filteredData = location ? data.filter(d => d['Location'] === location) : data;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach((btn, idx) => {
+                btn.classList.remove('active');
+                if ((idx === 0 && !location) || btn.textContent === location) {
+                    btn.classList.add('active');
+                }
+            });
+
+            updateDashboard();
+        }
+
+        // Calculate statistics
+        function calculateStats(dataset) {
+            const stats = {
+                avgSun: 0,
+                avgMoon: 0,
+                avgOverlap: 0,
+                avgNoSunMoon: 0,
+                totalLocations: new Set(dataset.map(d => d['Location'])).size,
+                totalRecords: dataset.length
+            };
+
+            dataset.forEach(d => {
+                stats.avgSun += d['Sun-Days'];
+                stats.avgMoon += d['Moon-Days'];
+                stats.avgOverlap += d['Overlap-Days'];
+                stats.avgNoSunMoon += d['No-Sun-No-Moon-Days'];
+            });
+
+            stats.avgSun = Math.round(stats.avgSun / dataset.length);
+            stats.avgMoon = Math.round(stats.avgMoon / dataset.length);
+            stats.avgOverlap = Math.round(stats.avgOverlap / dataset.length);
+            stats.avgNoSunMoon = Math.round(stats.avgNoSunMoon / dataset.length);
+
+            return stats;
+        }
+
+        // Update statistics cards
+        function updateStats() {
+            const stats = calculateStats(filteredData);
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <h3>Average Sun Days</h3>
+                    <div class="stat-value">${stats.avgSun}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Moon Days</h3>
+                    <div class="stat-value">${stats.avgMoon}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Overlap Days</h3>
+                    <div class="stat-value">${stats.avgOverlap}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average No Sun/Moon Days</h3>
+                    <div class="stat-value">${stats.avgNoSunMoon}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Locations</h3>
+                    <div class="stat-value">${stats.totalLocations}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Records</h3>
+                    <div class="stat-value">${stats.totalRecords}</div>
+                </div>
+            `;
+        }
+
+        // Prepare chart data
+        function prepareChartData(metric) {
+            const chartData = {};
+            const locationsInData = [...new Set(filteredData.map(d => d['Location']))];
+            
+            locationsInData.forEach(loc => {
+                chartData[loc] = [];
+            });
+
+            locationsInData.forEach(loc => {
+                const locData = filteredData.filter(d => d['Location'] === loc).sort((a, b) => a['Year'] - b['Year']);
+                locData.forEach(row => {
+                    chartData[loc].push(row[metric]);
+                });
+            });
+
+            return chartData;
+        }
+
+        const colors = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FF6384', '#C9CBCF'
+        ];
+
+        function createChart(canvasId, metric, title) {
+            const chartData = prepareChartData(metric);
+            const labels = years.slice(0, filteredData.length / Object.keys(chartData).length);
+            
+            const datasets = Object.entries(chartData).map((entry, idx) => ({
+                label: entry[0],
+                data: entry[1],
+                borderColor: colors[idx % colors.length],
+                backgroundColor: colors[idx % colors.length] + '20',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }));
+
+            const ctx = document.getElementById(canvasId);
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 365
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update table
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            filteredData.sort((a, b) => {
+                if (a['Location'] !== b['Location']) {
+                    return a['Location'].localeCompare(b['Location']);
+                }
+                return a['Year'] - b['Year'];
+            }).forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row['Location']}</td>
+                    <td>${row['Year']}</td>
+                    <td>${row['Sun-Days']}</td>
+                    <td>${row['Moon-Days']}</td>
+                    <td>${row['Overlap-Days']}</td>
+                    <td>${row['No-Sun-No-Moon-Days']}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Dashboard update function
+        function updateDashboard() {
+            updateStats();
+            updateTable();
+            
+            // Destroy existing charts
+            Chart.helpers.each(Chart.instances, function(instance) {
+                instance.destroy();
+            });
+
+            // Create new charts
+            setTimeout(() => {
+                createChart('sunChart', 'Sun-Days', 'Sun Days');
+                createChart('moonChart', 'Moon-Days', 'Moon Days');
+                createChart('overlapChart', 'Overlap-Days', 'Overlap Days');
+                createChart('noSunMoonChart', 'No-Sun-No-Moon-Days', 'No Sun/Moon Days');
+            }, 100);
+        }
+
+        // Initialize
+        populateFilters();
+        updateDashboard();
+    </script>
+</body>
+</html>
