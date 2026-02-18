@@ -226,16 +226,14 @@ def _compute_day_row(date: datetime.date,
     phase_value = moon_phase(date)
     moon_phase_angle_deg = round((phase_value / 28.0) * 360.0, 2)
 
-    # Visible overlap: only when moon phase angle is in [90, 270] (bright enough to see).
-    if 90 <= moon_phase_angle_deg <= 270:
-        visible_overlap_start, visible_overlap_end = overlap_start, overlap_end
-        total_visible_overlap_seconds = total_overlap_seconds
+    # Moon Not visible: when moon phase angle is < 30 or > 330 (crescent phases near new moon).
+    if moon_phase_angle_deg < 30 or moon_phase_angle_deg > 330:
+        total_moon_visible_seconds = 0.0
     else:
-        visible_overlap_start, visible_overlap_end = None, None
-        total_visible_overlap_seconds = 0.0
+        total_moon_visible_seconds = total_moon_seconds
 
-    # Surya = Sun Time - visible overlap; Chandra = Moon Time; Agni = No Moon No Sun Time.
-    surya_seconds = max(0.0, total_sun_seconds - total_visible_overlap_seconds)
+    # Surya = Sun Time - Moon Visible Time; Chandra = Moon Time; Agni = No Moon No Sun Time.
+    surya_seconds = max(0.0, total_sun_seconds - total_moon_visible_seconds)
     chandra_seconds = total_moon_seconds
     agni_seconds = total_no_sun_no_moon_seconds
 
@@ -251,9 +249,7 @@ def _compute_day_row(date: datetime.date,
             "overlap_start_time": _time_str(overlap_start),
             "overlap_end_time": _time_str(overlap_end),
             "total_overlap_seconds": total_overlap_seconds,
-            "visible_overlap_start_time": _time_str(visible_overlap_start),
-            "visible_overlap_end_time": _time_str(visible_overlap_end),
-            "total_visible_overlap_seconds": total_visible_overlap_seconds,
+            "total_moon_visible_seconds": total_moon_visible_seconds,
             "no_sun_no_moon_start_time": _time_str(no_sun_no_moon_start),
             "no_sun_no_moon_end_time": _time_str(no_sun_no_moon_end),
             "total_no_sun_no_moon_seconds": total_no_sun_no_moon_seconds,
@@ -276,9 +272,7 @@ CSV_HEADER = ["Date",
               "Overlap-Sun-Moon-Start-Time",
               "Overlap-Sun-Moon-End-Time",
               "Total-Overlap-Time",
-              "Visible-Overlap-Sun-Moon-Start-Time",
-              "Visible-Overlap-Sun-Moon-End-Time",
-              "Total-Visible-Overlap-Time",
+              "Total-Moon-Visible-Time",
               "No-Moon-No-Sun-Start-Time",
               "No-Moon-No-Sun-End-Time",
               "Total-No-Moon-No-Sun-Time",
@@ -288,7 +282,6 @@ CSV_HEADER = ["Date",
               "Total-Sun-Days",
               "Total-Moon-Days",
               "Total-Overlap-Days",
-              "Total-Visible-Overlap-Days",
               "Total-No-Sun-No-Moon-Days",
               "Surya-Days",
               "Chandra-Days",
@@ -324,7 +317,7 @@ def generate_csv(latitude: float,
     total_sun = 0.0
     total_moon = 0.0
     total_overlap = 0.0
-    total_visible_overlap = 0.0
+    total_moon_visible = 0.0
     total_no_sun_no_moon = 0.0
     total_surya = 0.0
     total_chandra = 0.0
@@ -339,7 +332,7 @@ def generate_csv(latitude: float,
         total_sun += row["total_sun_seconds"]
         total_moon += row["total_moon_seconds"]
         total_overlap += row["total_overlap_seconds"]
-        total_visible_overlap += row["total_visible_overlap_seconds"]
+        total_moon_visible += row["total_moon_visible_seconds"]
         total_no_sun_no_moon += row["total_no_sun_no_moon_seconds"]
         total_surya += row["surya_seconds"]
         total_chandra += row["chandra_seconds"]
@@ -363,9 +356,7 @@ def generate_csv(latitude: float,
                              row["overlap_start_time"],
                              row["overlap_end_time"],
                              _duration_str(row["total_overlap_seconds"]),
-                             row["visible_overlap_start_time"],
-                             row["visible_overlap_end_time"],
-                             _duration_str(row["total_visible_overlap_seconds"]),
+                             _duration_str(row["total_moon_visible_seconds"]),
                              row["no_sun_no_moon_start_time"],
                              row["no_sun_no_moon_end_time"],
                              _duration_str(
@@ -376,7 +367,6 @@ def generate_csv(latitude: float,
                              "",  # Total-Sun-Days (daily row: blank)
                              "",  # Total-Moon-Days
                              "",  # Total-Overlap-Days
-                             "",  # Total-Visible-Overlap-Days
                              "",  # Total-No-Sun-No-Moon-Days
                              "",  # Surya-Days
                              "",  # Chandra-Days
@@ -396,9 +386,7 @@ def generate_csv(latitude: float,
                          "",
                          "",
                          _duration_str(total_overlap),
-                         "",
-                         "",
-                         _duration_str(total_visible_overlap),
+                         _duration_str(total_moon_visible),
                          "",
                          "",
                          _duration_str(total_no_sun_no_moon),
@@ -408,7 +396,6 @@ def generate_csv(latitude: float,
                          _seconds_to_days(total_sun),
                          _seconds_to_days(total_moon),
                          _seconds_to_days(total_overlap),
-                         _seconds_to_days(total_visible_overlap),
                          _seconds_to_days(total_no_sun_no_moon),
                          _seconds_to_days(total_surya),
                          _seconds_to_days(total_chandra),
@@ -417,7 +404,7 @@ def generate_csv(latitude: float,
     totals = {"total_sun_seconds": total_sun,
               "total_moon_seconds": total_moon,
               "total_overlap_seconds": total_overlap,
-              "total_visible_overlap_seconds": total_visible_overlap,
+              "total_moon_visible_seconds": total_moon_visible,
               "total_no_sun_no_moon_seconds": total_no_sun_no_moon,
               "total_surya_seconds": total_surya,
               "total_chandra_seconds": total_chandra,
@@ -430,7 +417,7 @@ def print_summary(totals: dict, location_name: str, year: int) -> None:
     sun_d = _seconds_to_days(totals["total_sun_seconds"])
     moon_d = _seconds_to_days(totals["total_moon_seconds"])
     overlap_d = _seconds_to_days(totals["total_overlap_seconds"])
-    visible_overlap_d = _seconds_to_days(totals["total_visible_overlap_seconds"])
+    moon_visible_d = _seconds_to_days(totals["total_moon_visible_seconds"])
     no_sun_no_moon_d = _seconds_to_days(totals["total_no_sun_no_moon_seconds"])
     surya_d = _seconds_to_days(totals["total_surya_seconds"])
     chandra_d = _seconds_to_days(totals["total_chandra_seconds"])
@@ -440,9 +427,9 @@ def print_summary(totals: dict, location_name: str, year: int) -> None:
     print(f"  Sun:                    {sun_d} days")
     print(f"  Moon:                   {moon_d} days")
     print(f"  Sun-Moon Overlap:       {overlap_d} days")
-    print(f"  Visible Overlap:        {visible_overlap_d} days")
+    print(f"  Moon Visible:           {moon_visible_d} days")
     print(f"  No Sun No Moon:         {no_sun_no_moon_d} days")
-    print(f"  Surya (Sun - Vis.Over): {surya_d} days")
+    print(f"  Surya (Sun - Moon Vis): {surya_d} days")
     print(f"  Chandra (Moon):         {chandra_d} days")
     print(f"  Agni (No Sun No Moon):  {agni_d} days")
     print("")
@@ -466,7 +453,6 @@ def generate_summary_csv(summary_data: list[dict],
                          "Sun-Days",
                          "Moon-Days",
                          "Overlap-Days",
-                         "Visible-Overlap-Days",
                          "No-Sun-No-Moon-Days",
                          "Surya-Days",
                          "Chandra-Days",
@@ -477,7 +463,6 @@ def generate_summary_csv(summary_data: list[dict],
                              row["sun_days"],
                              row["moon_days"],
                              row["overlap_days"],
-                             row["visible_overlap_days"],
                              row["no_sun_no_moon_days"],
                              row["surya_days"],
                              row["chandra_days"],
@@ -528,8 +513,8 @@ def main():
             sun_d = _seconds_to_days(totals["total_sun_seconds"])
             moon_d = _seconds_to_days(totals["total_moon_seconds"])
             overlap_d = _seconds_to_days(totals["total_overlap_seconds"])
-            visible_overlap_d = _seconds_to_days(totals["total_visible_overlap_seconds"])
-            no_sun_no_moon_d = _seconds_to_days(totals["total_no_sun_no_moon_seconds"])
+            no_sun_no_moon_d = _seconds_to_days(
+                totals["total_no_sun_no_moon_seconds"])
             surya_d = _seconds_to_days(totals["total_surya_seconds"])
             chandra_d = _seconds_to_days(totals["total_chandra_seconds"])
             agni_d = _seconds_to_days(totals["total_agni_seconds"])
@@ -539,7 +524,6 @@ def main():
                                  "sun_days": sun_d,
                                  "moon_days": moon_d,
                                  "overlap_days": overlap_d,
-                                 "visible_overlap_days": visible_overlap_d,
                                  "no_sun_no_moon_days": no_sun_no_moon_d,
                                  "surya_days": surya_d,
                                  "chandra_days": chandra_d,
